@@ -1,0 +1,14 @@
+{# core/templates/admin/send_message.html #}
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Send Message{% endblock %}
+
+{% block content %}
+  <h1>Send Message to {{ order.prompts.last.from_user.username|default:order.user.username }}</h1>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="default">Send</button>
+    <a href="." class="button">Cancel</a>
+  </form>
+{% endblock %}
