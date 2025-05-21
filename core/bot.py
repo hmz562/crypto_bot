@@ -1,10 +1,17 @@
+#core /bot.py
+
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dotenv import load_dotenv
+load_dotenv()
+sys.path.insert(
+    0,
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 import django
 django.setup()
-from dotenv import load_dotenv
 import logging
 import requests
 from datetime import timedelta
@@ -40,7 +47,7 @@ from telegram.ext import (
 
 
 # بارگذاری متغیرهای محیطی و راه‌اندازی جنگو
-load_dotenv()
+
 
 
 # تنظیمات لاگ

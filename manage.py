@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#crypto_bot /manage.py
+
 import os
 import sys
 

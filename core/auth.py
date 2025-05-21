@@ -4,10 +4,13 @@ import logging
 from datetime import timedelta
 from random import randint
 from functools import wraps
+import os
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+from django.conf import settings
 
 from asgiref.sync import sync_to_async
 from django.utils import timezone
-
 from telegram import ReplyKeyboardRemove, Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import (
     CommandHandler,
@@ -40,16 +43,38 @@ def generate_otp() -> str:
     return str(randint(100000, 999999))
 
 def send_email(recipient: str, subject: str, text: str):
-    print(f"[DEBUG] Sending email to {recipient} — Subject: {subject} — Body: {text}")
-    from django.conf import settings
-    from django.core.mail import send_mail as django_send_mail
+    """
+    ارسال ایمیل OTP با استفاده از Sendinblue Transactional API.
+    """
+    logger.info(f"[DEBUG] send_email() using FROM = {settings.DEFAULT_FROM_EMAIL}")
 
-    from_email = settings.DEFAULT_FROM_EMAIL
+    # ۱) تنظیم کلید
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key['api-key'] = os.getenv("SENDINBLUE_API_KEY")
+
+    # ۲) ساخت client
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+        sib_api_v3_sdk.ApiClient(configuration)
+    )
+
+    # ۳) آماده‌سازی payload
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        sender      = {"email": settings.DEFAULT_FROM_EMAIL},
+        to          = [{"email": recipient}],
+        subject     = subject,
+        text_content= text
+    )
+
+    # ۴) ارسال
     try:
-        django_send_mail(subject, text, from_email, [recipient], fail_silently=False)
-        logger.info(f"OTP email sent to {recipient}")
-    except Exception as e:
-        logger.error(f"Error sending OTP email to {recipient}: {e}")
+        response = api_instance.send_transac_email(send_smtp_email)
+        # اگر نام صفتش message_id باشه:
+        message_id = getattr(response, 'message_id', None) or getattr(response, 'messageId', None)
+        logger.info(f"OTP email sent to {recipient}, messageId={message_id}")
+    except ApiException as e:
+        logger.error(f"Error sending OTP email via Sendinblue: {e}")
+        # در صورت لازم می‌تونی خطا رو پرتاب کنی تا flow ثبت‌نام متوقف شه
+        # raise
 
 async def start_auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # اگر کاربر قبلاً وارد شده، مستقیماً منوی اصلی را نمایش بده
